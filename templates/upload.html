@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Subir imagen</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <strong>Subir imagen</strong>
+    <a class="btn" href="{{ url_for('dashboard') }}">Volver</a>
+  </header>
+
+  <main class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="msgs">
+          {% for category, msg in messages %}
+            <p class="msg {{ category }}">{{ msg }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <form class="card" method="post" enctype="multipart/form-data" style="max-width:700px;">
+      <label>Proyecto</label>
+      <select name="project_id" required>
+        <option value="" selected disabled>-- Seleccionar proyecto --</option>
+        {% for p in projects %}
+          <option value="{{ p['id'] }}">{{ p['name'] }}</option>
+        {% endfor %}
+      </select>
+
+      <label>Imagen (JPG/PNG/WEBP)</label>
+      <input type="file" name="photo" accept="image/*" required>
+
+      <label>Nombre o código</label>
+      <input name="display_name" placeholder="Ej: 000123 o Informe #12" required>
+
+      <label>Descripción</label>
+      <textarea name="description" placeholder="Breve descripción..."></textarea>
+
+      <button type="submit">Guardar</button>
+
+      <p class="muted small" style="margin-top:10px;">
+        Si falta un proyecto, créalo en <b>Admin</b>.
+      </p>
+    </form>
+  </main>
+</body>
+</html>

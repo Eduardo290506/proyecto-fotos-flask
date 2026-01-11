@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ingreso</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo-dot"></div>
+      <div>
+        <div class="brand-title">Sistema de Fotos</div>
+        <div class="brand-sub">Acceso seguro</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="auth">
+    <section class="auth-card">
+      <h1 class="auth-title">Ingreso</h1>
+      <p class="muted">Ingresa con tu usuario y contraseña.</p>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-stack" style="margin-top:12px;">
+            {% for category, msg in messages %}
+              <div class="flash {{ category }}">{{ msg }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <form class="form" method="post" action="{{ url_for('login') }}" style="margin-top:12px;">
+        <div class="field">
+          <label>Usuario</label>
+          <input name="username" autocomplete="username" required placeholder="Ej: admin">
+        </div>
+
+        <div class="field">
+          <label>Contraseña</label>
+          <input name="password" type="password" autocomplete="current-password" required placeholder="••••••••">
+        </div>
+
+        <button class="btn btn-primary" type="submit" style="width:100%;">Entrar</button>
+
+        <p class="muted small" style="margin-top:10px;">
+          Si olvidaste tu contraseña, solicita el cambio al administrador.
+        </p>
+      </form>
+    </section>
+  </main>
+
+</body>
+</html>

@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Galería</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <script defer src="{{ url_for('static', filename='ui.js') }}"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo-dot"></div>
+      <div>
+        <div class="brand-title">Galería</div>
+        <div class="brand-sub">
+          Usuario: <b>{{ user.username }}</b> •
+          Rol: <b>{{ "Admin" if user.is_admin else "Usuario" }}</b>
+        </div>
+      </div>
+    </div>
+
+    <nav class="top-actions">
+      <a class="btn btn-ghost" href="{{ url_for('change_password') }}">Mi contraseña</a>
+
+      {% if user.is_admin %}
+        <button class="btn btn-primary" type="button" data-open="modalUpload">Subir</button>
+        <a class="btn btn-ghost" href="{{ url_for('admin_panel') }}">Admin</a>
+      {% endif %}
+
+      <a class="btn btn-ghost" href="{{ url_for('logout') }}">Salir</a>
+    </nav>
+  </header>
+
+  <main class="page">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-stack">
+          {% for category, msg in messages %}
+            <div class="flash {{ category }}">{{ msg }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- ======= FILTROS ======= -->
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <h2 class="h2">Búsqueda</h2>
+          <p class="muted">Filtra por nombre/código, descripción, proyecto y rango de fechas.</p>
+        </div>
+        <span class="badge badge-green">{{ photos|length }} resultados</span>
+      </div>
+
+      <form class="filters" method="get" action="{{ url_for('dashboard') }}">
+        <div class="field">
+          <label>Texto</label>
+          <input name="q" value="{{ q or '' }}" placeholder="Buscar por nombre o descripción...">
+        </div>
+
+        <div class="field">
+          <label>Proyecto</label>
+          <select name="project_id">
+            <option value="">Todos los proyectos</option>
+            {% for p in projects %}
+              <option value="{{ p['id'] }}" {% if project_id and (project_id|string) == (p['id']|string) %}selected{% endif %}>
+                {{ p["name"] }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Desde</label>
+          <input type="date" name="date_from" value="{{ date_from or '' }}">
+        </div>
+
+        <div class="field">
+          <label>Hasta</label>
+          <input type="date" name="date_to" value="{{ date_to or '' }}">
+        </div>
+
+        <div class="filters-actions">
+          <button class="btn btn-primary" type="submit">Filtrar</button>
+          <a class="btn btn-ghost" href="{{ url_for('dashboard') }}">Limpiar</a>
+        </div>
+      </form>
+    </section>
+
+    <!-- ======= GRID DE FOTOS ======= -->
+    <section class="gallery">
+      {% for ph in photos %}
+        <article class="photo-card">
+          <button class="photo-img" type="button"
+                  data-open="modalPreview"
+                  data-src="{{ url_for('uploaded_file', filepath=ph['filepath']) }}"
+                  data-title="{{ ph['display_name'] }}"
+                  data-project="{{ ph['project_name'] or 'General' }}"
+                  data-desc="{{ ph['description'] or '' }}"
+                  data-date="{{ ph['uploaded_at'] }}">
+            <img src="{{ url_for('uploaded_file', filepath=ph['filepath']) }}" alt="{{ ph['display_name'] }}">
+          </button>
+
+          <div class="photo-body">
+            <div class="photo-title">
+              <b>{{ ph["display_name"] }}</b>
+              <span class="pill pill-status">{{ ph["project_name"] or "General" }}</span>
+            </div>
+
+            {% if ph["description"] %}
+              <div class="muted small">{{ ph["description"] }}</div>
+            {% endif %}
+
+            <div class="muted small">Fecha: {{ ph["uploaded_at"] }}</div>
+
+            {% if user.is_admin %}
+              <div class="photo-actions">
+                <button class="btn btn-ghost" type="button"
+                        data-open="modalEdit"
+                        data-id="{{ ph['id'] }}"
+                        data-display="{{ ph['display_name'] }}"
+                        data-desc="{{ ph['description'] or '' }}"
+                        data-projectid="{{ ph['project_id'] or '' }}"
+                        data-img="{{ url_for('uploaded_file', filepath=ph['filepath']) }}">
+                  Editar
+                </button>
+
+                <form method="post" action="{{ url_for('delete_photo', photo_id=ph['id']) }}" data-confirm-message="¿Eliminar esta foto?">
+                  <button class="btn btn-danger" type="submit">Eliminar</button>
+                </form>
+              </div>
+            {% endif %}
+          </div>
+        </article>
+      {% endfor %}
+    </section>
+  </main>
+
+  <!-- ================= MODAL: SUBIR ================= -->
+  {% if user.is_admin %}
+  <div class="modal" id="modalUpload" aria-hidden="true">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-dialog">
+      <div class="modal-head">
+        <div>
+          <h3 class="h3">Subir imagen</h3>
+          <p class="muted small">Se guardará dentro del proyecto seleccionado.</p>
+        </div>
+        <button class="icon-btn" type="button" data-close aria-label="Cerrar">✕</button>
+      </div>
+
+      <form class="modal-body form" method="post" action="{{ url_for('upload') }}" enctype="multipart/form-data">
+        <div class="field">
+          <label>Proyecto</label>
+          <select name="project_id" required>
+            <option value="">Selecciona…</option>
+            {% for p in projects %}
+              <option value="{{ p['id'] }}">{{ p["name"] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label>Nombre / Código</label>
+            <input name="display_name" required placeholder="Ej: MUESTRA-AGUA-001">
+          </div>
+          <div class="field">
+            <label>Archivo</label>
+            <input type="file" name="photo" accept=".jpg,.jpeg,.png,.webp" required>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Descripción</label>
+          <textarea name="description" placeholder="Breve descripción..."></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn btn-primary" type="submit">Subir</button>
+          <button class="btn btn-ghost" type="button" data-close>Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ================= MODAL: EDITAR ================= -->
+  {% if user.is_admin %}
+  <div class="modal" id="modalEdit" aria-hidden="true">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-dialog">
+      <div class="modal-head">
+        <div>
+          <h3 class="h3">Editar imagen</h3>
+          <p class="muted small">Actualiza nombre, descripción o proyecto.</p>
+        </div>
+        <button class="icon-btn" type="button" data-close aria-label="Cerrar">✕</button>
+      </div>
+
+      <form class="modal-body form" method="post" id="editForm">
+        <div class="edit-preview">
+          <img id="editImg" alt="preview">
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label>Nombre / Código</label>
+            <input name="display_name" id="editDisplay" required>
+          </div>
+          <div class="field">
+            <label>Proyecto</label>
+            <select name="project_id" id="editProject" required>
+              <option value="">Selecciona…</option>
+              {% for p in projects %}
+                <option value="{{ p['id'] }}">{{ p["name"] }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Descripción</label>
+          <textarea name="description" id="editDesc"></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn btn-primary" type="submit">Guardar</button>
+          <button class="btn btn-ghost" type="button" data-close>Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ================= MODAL: PREVIEW ================= -->
+  <div class="modal" id="modalPreview" aria-hidden="true">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-dialog modal-wide">
+      <div class="modal-head">
+        <div>
+          <h3 class="h3" id="pvTitle">Vista</h3>
+          <p class="muted small" id="pvMeta"></p>
+        </div>
+        <button class="icon-btn" type="button" data-close aria-label="Cerrar">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="preview-img">
+          <img id="pvImg" alt="preview">
+        </div>
+        <p class="muted" id="pvDesc" style="margin-top:10px;"></p>
+      </div>
+    </div>
+  </div>
+  <div class="modal" id="modalConfirm" aria-hidden="true">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-dialog modal-confirm">
+      <div class="modal-head">
+        <div>
+          <h3 class="h3">Confirmar acción</h3>
+          <p class="muted small confirm-message">¿Seguro que deseas continuar?</p>
+        </div>
+        <button class="icon-btn" type="button" data-close aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-actions" style="padding:16px;">
+        <button class="btn btn-primary" type="button" data-confirm-accept>Aceptar</button>
+        <button class="btn btn-ghost" type="button" data-close>Cancelar</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

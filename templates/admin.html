@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panel Admin</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <script defer src="{{ url_for('static', filename='ui.js') }}"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo-dot"></div>
+      <div>
+        <div class="brand-title">Panel Admin</div>
+        <div class="brand-sub">Gestión de usuarios y proyectos</div>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <a class="btn btn-ghost" href="{{ url_for('dashboard') }}">Volver</a>
+      <a class="btn btn-ghost" href="{{ url_for('download_backup') }}">Backup</a>
+      <a class="btn btn-primary" href="{{ url_for('logout') }}">Salir</a>
+    </div>
+  </header>
+
+  <main class="page">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-stack">
+          {% for category, msg in messages %}
+            <div class="flash {{ category }}">{{ msg }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="grid">
+      <!-- ================= USUARIOS ================= -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2 class="h2">Usuarios</h2>
+            <p class="muted">Tu usuario: <b>{{ current_user.username }}</b></p>
+          </div>
+          <span class="badge">Seguridad</span>
+        </div>
+
+        <form class="form" method="post" action="{{ url_for('admin_create_user') }}">
+          <div class="row">
+            <div class="field">
+              <label>Usuario</label>
+              <input name="username" required placeholder="Ej: operador1">
+            </div>
+            <div class="field">
+              <label>Contraseña</label>
+              <input name="password" type="password" required placeholder="••••••••">
+            </div>
+          </div>
+
+          <div class="row row-tight">
+            <label class="checkbox">
+              <input type="checkbox" name="is_admin">
+              <span>Administrador</span>
+            </label>
+
+            <button class="btn btn-primary" type="submit">Crear usuario</button>
+          </div>
+
+          <p class="muted small">
+            Al eliminar un usuario, sus fotos quedan en el sistema pero sin dueño.
+          </p>
+        </form>
+
+        <div class="divider"></div>
+
+        <h3 class="h3">Lista de usuarios</h3>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Usuario</th>
+                <th>Rol</th>
+                <th class="right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for u in users %}
+                <tr>
+                  <td><b>{{ u["username"] }}</b></td>
+                  <td>
+                    {% if u["is_admin"] == 1 %}
+                      <span class="pill pill-admin">Admin</span>
+                    {% else %}
+                      <span class="pill pill-user">Usuario</span>
+                    {% endif %}
+                  </td>
+                  <td class="right">
+                    {% if u["id"] == current_user.id %}
+                      <button class="btn btn-danger" type="button" disabled title="No puedes eliminar tu propio usuario">
+                        Eliminar
+                      </button>
+                    {% else %}
+                          <form method="post"
+                            action="{{ url_for('admin_delete_user', user_id=u.id) }}"
+                            data-confirm-message="¿Eliminar usuario {{ u.username }}? Sus fotos quedarán sin dueño."
+                            style="display:inline;">
+                        <button class="btn btn-danger" type="submit">Eliminar</button>
+                      </form>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ================= PROYECTOS ================= -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2 class="h2">Proyectos</h2>
+            <p class="muted">Cada proyecto crea su carpeta en <b>uploads/</b></p>
+          </div>
+          <span class="badge badge-green">Organización</span>
+        </div>
+
+        <form class="form" method="post" action="{{ url_for('admin_create_project') }}">
+          <div class="field">
+            <label>Nombre del proyecto</label>
+            <input name="project_name" placeholder="Ej: Monitoreo Río 2026" required>
+          </div>
+
+          <div class="field">
+            <label>Descripción</label>
+            <textarea name="project_description" placeholder="Breve descripción del proyecto..."></textarea>
+          </div>
+
+          <div class="row row-tight">
+            <div class="field" style="min-width: 220px;">
+              <label>Estado</label>
+              <select name="project_status">
+                <option value="pendiente">Pendiente</option>
+                <option value="en_proceso">En proceso</option>
+                <option value="terminado">Terminado</option>
+              </select>
+            </div>
+
+            <button class="btn btn-primary" type="submit">Crear proyecto</button>
+          </div>
+        </form>
+
+        <div class="divider"></div>
+
+        <h3 class="h3">Lista de proyectos</h3>
+
+        <div class="project-list">
+          {% for p in projects %}
+            <div class="project-item">
+              <div class="project-main">
+                <div class="project-title">
+                  <b>{{ p["name"] }}</b>
+                  <span class="muted small">({{ p["slug"] }})</span>
+                </div>
+
+                <div class="project-meta">
+                  <span class="pill pill-status">{{ p["status"] or "pendiente" }}</span>
+                  {% if p["description"] %}
+                    <span class="muted small">• {{ p["description"] }}</span>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="project-actions">
+                <a class="btn btn-ghost" href="{{ url_for('admin_edit_project', project_id=p['id']) }}">Editar</a>
+
+                {% if p["slug"] == "general" %}
+                  <button class="btn btn-danger" type="button" disabled title="El proyecto General no se puede eliminar">
+                    No eliminable
+                  </button>
+                {% else %}
+                  <form method="post"
+                        action="{{ url_for('admin_delete_project', project_id=p['id']) }}"
+                        data-confirm-message="¿Eliminar proyecto {{ p.name }}? Las fotos se moverán a General."
+                        style="display:inline;">
+                    <button class="btn btn-danger" type="submit">Eliminar</button>
+                  </form>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+
+        <p class="muted small" style="margin-top:12px;">
+          Sugerencia: usa “General” como repositorio general, no se elimina para proteger el sistema.
+        </p>
+      </section>
+    </div>
+  </main>
+  <div class="modal" id="modalConfirm" aria-hidden="true">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-dialog modal-confirm">
+      <div class="modal-head">
+        <div>
+          <h3 class="h3">Confirmar acción</h3>
+          <p class="muted small confirm-message">¿Seguro que deseas continuar?</p>
+        </div>
+        <button class="icon-btn" type="button" data-close aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-actions" style="padding:16px;">
+        <button class="btn btn-primary" type="button" data-confirm-accept>Aceptar</button>
+        <button class="btn btn-ghost" type="button" data-close>Cancelar</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

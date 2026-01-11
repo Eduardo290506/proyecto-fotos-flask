@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Editar proyecto</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo-dot"></div>
+      <div>
+        <div class="brand-title">Editar proyecto</div>
+        <div class="brand-sub">Actualiza nombre, descripción y estado</div>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <a class="btn btn-ghost" href="{{ url_for('admin_panel') }}">Volver</a>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="card" style="max-width:780px; margin:0 auto;">
+      <div class="card-head">
+        <div>
+          <h2 class="h2">Proyecto: {{ project['name'] }}</h2>
+          <p class="muted small">Edita la información principal del proyecto.</p>
+        </div>
+      </div>
+
+      <form class="form" method="post">
+        <div class="field">
+          <label>Nombre</label>
+          <input name="name" value="{{ project['name'] }}" required>
+        </div>
+
+        <div class="field">
+          <label>Descripción</label>
+          <textarea name="description">{{ project['description'] or '' }}</textarea>
+        </div>
+
+        <div class="field">
+          <label>Estado</label>
+          <select name="status">
+            <option value="pendiente" {% if (project['status'] or 'pendiente') == 'pendiente' %}selected{% endif %}>Pendiente</option>
+            <option value="en_proceso" {% if project['status'] == 'en_proceso' %}selected{% endif %}>En proceso</option>
+            <option value="terminado" {% if project['status'] == 'terminado' %}selected{% endif %}>Terminado</option>
+          </select>
+        </div>
+
+        <p class="muted small">
+          Nota: el “slug” (carpeta) no se cambia para no romper rutas de imágenes.
+        </p>
+
+        <div class="modal-actions" style="padding:0; margin-top:16px;">
+          <button class="btn btn-primary" type="submit">Guardar cambios</button>
+          <a class="btn btn-ghost" href="{{ url_for('admin_panel') }}">Cancelar</a>
+        </div>
+      </form>
+    </section>
+  </main>
+</body>
+</html>
